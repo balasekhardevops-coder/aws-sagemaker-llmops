@@ -18,7 +18,7 @@ resource "aws_vpc_endpoint" "s3" {
 }
 
 resource "aws_vpc_endpoint" "interface" {
-  for_each = local.interface_endpoint_services
+  for_each = { for name, service in local.interface_endpoint_services : name => service if contains(var.enabled_interface_endpoints, name) }
 
   vpc_id              = aws_vpc.llmops.id
   service_name        = each.value

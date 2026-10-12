@@ -1,3 +1,5 @@
+> **Current Dev note:** Dev retains its original root resource addresses for state continuity. The shared network, security, endpoints, S3 and IAM modules apply to QA/Prod; see [Repair & deployment runbook](REPAIR_AND_DEPLOY.md).
+
 # Step 3 — Modular SageMaker Studio VpcOnly
 
 ## What belongs where

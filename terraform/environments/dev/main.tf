@@ -1,67 +1,30 @@
+# Dev retains the original root-level resource addresses for safe state continuity.
+# Do not add network/security/endpoints/s3-data/iam modules here without moved
+# blocks and a reviewed state migration plan.
 data "aws_caller_identity" "current" {}
 
 locals {
   name_prefix = var.aws_region == "ap-south-1" ? "${var.project_name}-${var.environment}" : "${var.project_name}-${var.environment}-${var.aws_region}"
-  data_bucket = "${local.name_prefix}-data-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
 }
 
-module "network" {
-  source               = "../../modules/network"
-  name_prefix          = local.name_prefix
-  vpc_cidr             = var.vpc_cidr
-  private_subnet_cidrs = var.private_subnet_cidrs
-}
-
-module "security" {
-  source      = "../../modules/security"
-  name_prefix = local.name_prefix
-  vpc_id      = module.network.vpc_id
-  vpc_cidr    = module.network.vpc_cidr
-  aws_region  = var.aws_region
-}
-
-module "endpoints" {
-  source                      = "../../modules/endpoints"
-  name_prefix                 = local.name_prefix
-  aws_region                  = var.aws_region
-  vpc_id                      = module.network.vpc_id
-  private_subnet_ids          = module.network.private_subnet_ids
-  private_route_table_ids     = module.network.private_route_table_ids
-  endpoint_security_group_id  = module.security.endpoint_security_group_id
-  enabled_interface_endpoints = var.enabled_interface_endpoints
-}
-
+# KMS key and Studio were not present in the legacy flat Dev stack.
 module "kms" {
   source      = "../../modules/kms"
   name_prefix = local.name_prefix
 }
 
-module "data_bucket" {
-  source      = "../../modules/s3-data"
-  bucket_name = local.data_bucket
-  kms_key_arn = module.kms.key_arn
-}
-
-module "iam" {
-  source          = "../../modules/iam"
-  name_prefix     = local.name_prefix
-  data_bucket_arn = module.data_bucket.bucket_arn
-  kms_key_arn     = module.kms.key_arn
-}
-
 module "studio" {
   source                   = "../../modules/studio"
   name_prefix              = local.name_prefix
-  vpc_id                   = module.network.vpc_id
-  private_subnet_ids       = module.network.private_subnet_ids
-  domain_security_group_id = module.security.domain_security_group_id
-  user_security_group_id   = module.security.user_security_group_id
-  execution_role_arn       = module.iam.execution_role_arn
+  vpc_id                   = aws_vpc.llmops.id
+  private_subnet_ids       = [for k in sort(keys(aws_subnet.private)) : aws_subnet.private[k].id]
+  domain_security_group_id = aws_security_group.studio_domain.id
+  user_security_group_id   = aws_security_group.studio.id
+  execution_role_arn       = aws_iam_role.studio_execution.arn
   kms_key_arn              = module.kms.key_arn
   user_profile_name        = var.user_profile_name
   jupyterlab_instance_type = var.jupyterlab_instance_type
   start_jupyterlab         = var.start_jupyterlab
 
-  # Private endpoints and IAM must be ready before creating the domain.
-  depends_on = [module.endpoints, module.security, module.iam]
+  depends_on = [aws_vpc_endpoint.s3, aws_vpc_endpoint.interface, aws_iam_role_policy.studio_data, aws_iam_role_policy.studio_kms]
 }

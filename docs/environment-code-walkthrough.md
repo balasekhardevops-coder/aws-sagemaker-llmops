@@ -1,3 +1,5 @@
+> **Current Dev note:** Dev retains its original root resource addresses for state continuity. The shared network, security, endpoints, S3 and IAM modules apply to QA/Prod; see [Repair & deployment runbook](REPAIR_AND_DEPLOY.md).
+
 # Reading the multi-environment Terraform code
 
 `terraform/environments/<env>/main.tf` is the **root module**. It calls `../../modules/network`, `security`, `endpoints`, `kms`, `s3-data`, `iam`, and optionally `studio`.

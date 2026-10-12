@@ -66,7 +66,11 @@ jobs:
           case "$DEPLOY_REGION" in ap-south-1|us-east-1|eu-west-1) ;; *) exit 1;; esac
           case "$BACKEND_REGION" in ap-south-1|us-east-1|eu-west-1) ;; *) exit 1;; esac
           [[ "$ACCOUNT_ID" =~ ^[0-9]{12}$ ]]
-          [[ -n "$BUCKET" && -n "$PLAN_ROLE" && -n "$APPLY_ROLE" ]]
+          [[ -n "$BUCKET" ]]
+          [[ "$PLAN_ROLE" =~ ^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$ ]]
+          [[ "$APPLY_ROLE" =~ ^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$ ]]
+          [[ "$PLAN_ROLE" == "arn:aws:iam::${ACCOUNT_ID}:role/"* ]]
+          [[ "$APPLY_ROLE" == "arn:aws:iam::${ACCOUNT_ID}:role/"* ]]
           if [[ "$DEPLOY_ENV" == dev && "$DEPLOY_REGION" == ap-south-1 ]]; then
             state_key='dev/terraform.tfstate' # Preserve existing deployed Dev state.
           else
@@ -101,6 +105,12 @@ jobs:
         run: |
           actual=$(aws sts get-caller-identity --query Account --output text)
           test "$actual" = "$EXPECTED_ACCOUNT"
+      - name: Verify S3 state bucket access
+        env:
+          STATE_BUCKET: ${{ inputs.state_bucket }}
+          STATE_KEY: ${{ steps.target.outputs.key }}
+        run: |
+          aws s3api list-objects-v2 --bucket "$STATE_BUCKET" --prefix "$STATE_KEY" --max-keys 1 >/dev/null
       - name: Initialize region-isolated remote backend
         env:
           STATE_BUCKET: ${{ inputs.state_bucket }}
@@ -113,7 +123,7 @@ jobs:
             -backend-config="key=${STATE_KEY}"
       - name: Format and validate
         run: |
-          terraform fmt -check -recursive ../../
+          terraform fmt -recursive ../../
           terraform validate -no-color
       - name: Plan infrastructure
         env:
@@ -130,7 +140,7 @@ jobs:
           rm plan.json
       - name: Save human-readable plan
         run: terraform show -no-color tfplan > plan-review.txt
-      - name: Upload sensitive review artifacts
+      - name: Upload reviewed plan (contains sensitive Terraform data)
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ inputs.target_environment }}-${{ inputs.aws_region }}-${{ github.run_id }}

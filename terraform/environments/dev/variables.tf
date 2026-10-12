@@ -39,7 +39,7 @@ variable "start_jupyterlab" {
 variable "enabled_interface_endpoints" {
   type        = set(string)
   description = "Interface endpoints enabled for this environment"
-  default     = ["api", "runtime"]
+  default     = ["api", "runtime", "studio", "sts", "logs"]
 
   validation {
     condition     = length(setsubtract(var.enabled_interface_endpoints, toset(["api", "runtime", "studio", "sts", "logs"]))) == 0

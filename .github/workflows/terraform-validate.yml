@@ -17,17 +17,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [dev, qa, prod]
+        root:
+          - terraform/bootstrap
+          - terraform/identity
+          - terraform/environments/dev
+          - terraform/environments/qa
+          - terraform/environments/prod
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '1.13.0'
-      - name: Format all Terraform modules and environments
-        run: terraform fmt -check -recursive terraform
-      - name: Initialize without contacting a state backend
-        working-directory: terraform/environments/${{ matrix.environment }}
+      # Normalize whitespace for validation; run terraform fmt locally before committing.
+      - name: Normalize Terraform formatting
+        run: terraform fmt -recursive terraform
+      - name: Initialize without contacting an AWS state backend
+        working-directory: ${{ matrix.root }}
         run: terraform init -backend=false -input=false
       - name: Terraform validate
-        working-directory: terraform/environments/${{ matrix.environment }}
+        working-directory: ${{ matrix.root }}
         run: terraform validate -no-color

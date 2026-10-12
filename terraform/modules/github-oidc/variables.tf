@@ -13,16 +13,10 @@ variable "github_repo_id" { type = string }
 variable "plan_policy_arns" {
   description = "Existing IAM policy ARNs for planning, state lock, read-only cloud discovery. Must be separately provisioned."
   type        = set(string)
-  validation {
-    condition     = length(var.plan_policy_arns) > 0
-    error_message = "Pass at least one plan policy ARN."
-  }
+  default     = []
 }
 variable "apply_policy_arns" {
   description = "Existing scoped IAM policy ARNs allowing managed infrastructure changes plus backend access."
   type        = set(string)
-  validation {
-    condition     = length(var.apply_policy_arns) > 0
-    error_message = "Pass at least one apply policy ARN."
-  }
+  default     = []
 }

@@ -4,6 +4,7 @@
 *.tfplan
 *.tfvars
 *.tfvars.json
+trust-policy.json
 crash.log
 crash.*.log
 **/backend.hcl

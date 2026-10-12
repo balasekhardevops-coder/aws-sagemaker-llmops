@@ -1,3 +1,5 @@
+> **Recovery note:** See [Repair & deployment runbook](REPAIR_AND_DEPLOY.md) for the corrected Dev role/identity bootstrap and state-preserving Dev root.
+
 # Manual Dev, QA, Prod Terraform deployments in three regions
 
 ## Select environment and region
