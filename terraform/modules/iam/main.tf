@@ -25,8 +25,18 @@ data "aws_iam_policy_document" "studio" {
   }
   statement {
     sid = "UseProjectEncryptionKey"
-    actions = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey", "kms:CreateGrant"]
+    actions = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"]
     resources = [var.kms_key_arn]
+  }
+  statement {
+    sid = "GrantOnlyForAWSServices"
+    actions = ["kms:CreateGrant"]
+    resources = [var.kms_key_arn]
+    condition {
+      test     = "Bool"
+      variable = "kms:GrantIsForAWSResource"
+      values   = ["true"]
+    }
   }
   statement {
     sid = "ExploreSageMakerJobs"

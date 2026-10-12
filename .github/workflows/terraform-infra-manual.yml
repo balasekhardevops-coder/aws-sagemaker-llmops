@@ -1,0 +1,39 @@
+name: Terraform Infrastructure - Manual
+
+# Deploy exactly one selected AWS account/environment/region per manual run.
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: Target AWS environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+      aws_region:
+        description: AWS region where resources will be deployed
+        required: true
+        type: choice
+        default: ap-south-1
+        options:
+          - ap-south-1
+          - us-east-1
+          - eu-west-1
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  infrastructure:
+    uses: ./.github/workflows/terraform-reusable-deploy.yml
+    with:
+      target_environment: ${{ inputs.target_environment }}
+      aws_region: ${{ inputs.aws_region }}
+      expected_account_id: ${{ inputs.target_environment == 'dev' && vars.AWS_ACCOUNT_DEV || inputs.target_environment == 'qa' && vars.AWS_ACCOUNT_QA || vars.AWS_ACCOUNT_PROD }}
+      state_bucket: ${{ inputs.target_environment == 'dev' && vars.TF_STATE_BUCKET_DEV || inputs.target_environment == 'qa' && vars.TF_STATE_BUCKET_QA || vars.TF_STATE_BUCKET_PROD }}
+      backend_region: ${{ inputs.target_environment == 'dev' && vars.TF_BACKEND_REGION_DEV || inputs.target_environment == 'qa' && vars.TF_BACKEND_REGION_QA || vars.TF_BACKEND_REGION_PROD }}
+      plan_role_arn: ${{ inputs.target_environment == 'dev' && vars.AWS_PLAN_ROLE_DEV || inputs.target_environment == 'qa' && vars.AWS_PLAN_ROLE_QA || vars.AWS_PLAN_ROLE_PROD }}
+      apply_role_arn: ${{ inputs.target_environment == 'dev' && vars.AWS_APPLY_ROLE_DEV || inputs.target_environment == 'qa' && vars.AWS_APPLY_ROLE_QA || vars.AWS_APPLY_ROLE_PROD }}

@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars only for local operation (it is gitignored).
+# GitHub Actions passes TF_VAR_aws_region and TF_VAR_expected_account_id from inputs / repository vars.
+project_name         = "sagemaker-llmops"
+environment          = "prod"
+aws_region           = "ap-south-1"
+expected_account_id  = "123456789012" # REPLACE with the prod AWS account
+vpc_cidr             = "10.40.0.0/16"
+private_subnet_cidrs  = ["10.40.1.0/24", "10.40.2.0/24"]
+enable_studio        = false
+start_jupyterlab     = false

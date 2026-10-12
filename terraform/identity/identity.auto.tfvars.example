@@ -1,0 +1,6 @@
+# Template only: do not rename to .auto.tfvars until each account-specific value is resolved.
+# Use IAM policies created by a separate security/IAM governance stack; do not use AdministratorAccess in production.
+expected_account_id = "REPLACE_WITH_12_DIGIT_ACCOUNT_ID"
+environment = "qa"
+plan_policy_arns = ["arn:aws:iam::ACCOUNT_ID:policy/terraform-qa-plan"]
+apply_policy_arns = ["arn:aws:iam::ACCOUNT_ID:policy/terraform-qa-apply"]

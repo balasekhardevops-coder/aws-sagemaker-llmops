@@ -1,0 +1,195 @@
+name: Terraform Reusable Deploy
+on:
+  workflow_call:
+    inputs:
+      target_environment:
+        required: true
+        type: string
+      aws_region:
+        required: true
+        type: string
+      expected_account_id:
+        required: true
+        type: string
+      state_bucket:
+        required: true
+        type: string
+      backend_region:
+        required: true
+        type: string
+      plan_role_arn:
+        required: true
+        type: string
+      apply_role_arn:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+# A region-specific state has its own mutex; S3 also locks the state file.
+concurrency:
+  group: terraform-${{ inputs.target_environment }}-${{ inputs.aws_region }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan ${{ inputs.target_environment }} / ${{ inputs.aws_region }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      commit_sha: ${{ steps.revision.outputs.sha }}
+      state_key: ${{ steps.target.outputs.key }}
+    defaults:
+      run:
+        working-directory: terraform/environments/${{ inputs.target_environment }}
+    steps:
+      - name: Checkout reviewed revision
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Protect deployment inputs and choose state key
+        id: target
+        env:
+          DEPLOY_ENV: ${{ inputs.target_environment }}
+          DEPLOY_REGION: ${{ inputs.aws_region }}
+          ACCOUNT_ID: ${{ inputs.expected_account_id }}
+          BUCKET: ${{ inputs.state_bucket }}
+          BACKEND_REGION: ${{ inputs.backend_region }}
+          PLAN_ROLE: ${{ inputs.plan_role_arn }}
+          APPLY_ROLE: ${{ inputs.apply_role_arn }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          case "$DEPLOY_ENV" in dev|qa|prod) ;; *) exit 1;; esac
+          case "$DEPLOY_REGION" in ap-south-1|us-east-1|eu-west-1) ;; *) exit 1;; esac
+          case "$BACKEND_REGION" in ap-south-1|us-east-1|eu-west-1) ;; *) exit 1;; esac
+          [[ "$ACCOUNT_ID" =~ ^[0-9]{12}$ ]]
+          [[ -n "$BUCKET" && -n "$PLAN_ROLE" && -n "$APPLY_ROLE" ]]
+          if [[ "$DEPLOY_ENV" == dev && "$DEPLOY_REGION" == ap-south-1 ]]; then
+            state_key='dev/terraform.tfstate' # Preserve existing deployed Dev state.
+          else
+            state_key="$DEPLOY_ENV/$DEPLOY_REGION/terraform.tfstate"
+          fi
+          echo "key=$state_key" >> "$GITHUB_OUTPUT"
+          echo "### Terraform Plan: $DEPLOY_ENV / $DEPLOY_REGION" >> "$GITHUB_STEP_SUMMARY"
+          echo "S3 state key: \`$state_key\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Require a private infrastructure repository for Prod
+        if: inputs.target_environment == 'prod'
+        run: |
+          if [[ "$GITHUB_REPOSITORY_VISIBILITY" != "private" ]]; then
+            echo 'Production plans may contain sensitive values. Use a private infrastructure repository.' >&2
+            exit 1
+          fi
+      - name: Pin reviewed commit
+        id: revision
+        run: echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.13.0'
+          terraform_wrapper: false
+      - name: AWS OIDC plan role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.plan_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+      - name: Verify AWS account
+        env:
+          EXPECTED_ACCOUNT: ${{ inputs.expected_account_id }}
+        run: |
+          actual=$(aws sts get-caller-identity --query Account --output text)
+          test "$actual" = "$EXPECTED_ACCOUNT"
+      - name: Initialize region-isolated remote backend
+        env:
+          STATE_BUCKET: ${{ inputs.state_bucket }}
+          BACKEND_REGION: ${{ inputs.backend_region }}
+          STATE_KEY: ${{ steps.target.outputs.key }}
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${STATE_BUCKET}" \
+            -backend-config="region=${BACKEND_REGION}" \
+            -backend-config="key=${STATE_KEY}"
+      - name: Format and validate
+        run: |
+          terraform fmt -check -recursive ../../
+          terraform validate -no-color
+      - name: Plan infrastructure
+        env:
+          TF_VAR_expected_account_id: ${{ inputs.expected_account_id }}
+          TF_VAR_aws_region: ${{ inputs.aws_region }}
+        run: terraform plan -input=false -lock-timeout=5m -out=tfplan
+      - name: Block destructive changes to production
+        if: inputs.target_environment == 'prod'
+        run: |
+          set -euo pipefail
+          terraform show -json tfplan > plan.json
+          # A replacement has both delete and create actions. No deletions or replacements in Prod.
+          jq -e '[.resource_changes[]? | select(.change.actions | index("delete"))] | length == 0' plan.json
+          rm plan.json
+      - name: Save human-readable plan
+        run: terraform show -no-color tfplan > plan-review.txt
+      - name: Upload sensitive review artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ inputs.target_environment }}-${{ inputs.aws_region }}-${{ github.run_id }}
+          path: |
+            terraform/environments/${{ inputs.target_environment }}/tfplan
+            terraform/environments/${{ inputs.target_environment }}/plan-review.txt
+          retention-days: 1
+          if-no-files-found: error
+
+  apply:
+    name: Apply ${{ inputs.target_environment }} / ${{ inputs.aws_region }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    needs: plan
+    environment:
+      name: terraform-${{ inputs.target_environment }}
+    defaults:
+      run:
+        working-directory: terraform/environments/${{ inputs.target_environment }}
+    steps:
+      - name: Checkout exact planned commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.commit_sha }}
+          persist-credentials: false
+      - name: Confirm immutable commit
+        env:
+          PLANNED_SHA: ${{ needs.plan.outputs.commit_sha }}
+        run: test "$(git rev-parse HEAD)" = "$PLANNED_SHA"
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.13.0'
+          terraform_wrapper: false
+      - name: AWS OIDC apply role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.apply_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+      - name: Verify AWS account
+        env:
+          EXPECTED_ACCOUNT: ${{ inputs.expected_account_id }}
+        run: |
+          actual=$(aws sts get-caller-identity --query Account --output text)
+          test "$actual" = "$EXPECTED_ACCOUNT"
+      - name: Initialize same region-isolated state
+        env:
+          STATE_BUCKET: ${{ inputs.state_bucket }}
+          BACKEND_REGION: ${{ inputs.backend_region }}
+          STATE_KEY: ${{ needs.plan.outputs.state_key }}
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${STATE_BUCKET}" \
+            -backend-config="region=${BACKEND_REGION}" \
+            -backend-config="key=${STATE_KEY}"
+      - name: Download reviewed plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ inputs.target_environment }}-${{ inputs.aws_region }}-${{ github.run_id }}
+          path: terraform/environments/${{ inputs.target_environment }}
+      - name: Apply exact saved plan
+        run: terraform apply -input=false -lock-timeout=5m tfplan

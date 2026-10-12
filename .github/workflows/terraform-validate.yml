@@ -1,28 +1,33 @@
 name: Terraform Validate
-
 on:
   pull_request:
-    paths: ['terraform/**', '.github/workflows/terraform-validate.yml']
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-*.yml'
   push:
     branches: [main]
-    paths: ['terraform/**', '.github/workflows/terraform-validate.yml']
-
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-*.yml'
 permissions:
   contents: read
-
 jobs:
-  validate-dev:
+  validate:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, qa, prod]
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '1.13.0'
-      - name: Format check across module tree
+      - name: Format all Terraform modules and environments
         run: terraform fmt -check -recursive terraform
-      - name: Initialize without S3 backend or AWS credentials
-        working-directory: terraform/environments/dev
+      - name: Initialize without contacting a state backend
+        working-directory: terraform/environments/${{ matrix.environment }}
         run: terraform init -backend=false -input=false
-      - name: Validate modules and dev root
-        working-directory: terraform/environments/dev
+      - name: Terraform validate
+        working-directory: terraform/environments/${{ matrix.environment }}
         run: terraform validate -no-color

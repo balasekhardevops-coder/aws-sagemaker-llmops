@@ -6,3 +6,8 @@ output "sagemaker_domain_id" { value = module.studio.domain_id }
 output "sagemaker_user_profile" { value = module.studio.user_profile_name }
 output "jupyterlab_space_name" { value = module.studio.space_name }
 output "interface_endpoint_ids" { value = module.endpoints.interface_endpoint_ids }
+
+output "interface_vpc_endpoint_ids" {
+  description = "Interface VPC endpoints provisioned in this environment"
+  value       = module.endpoints.interface_endpoint_ids
+}

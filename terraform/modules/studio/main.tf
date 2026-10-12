@@ -15,7 +15,9 @@ resource "aws_sagemaker_domain" "this" {
       app_lifecycle_management {
         idle_settings {
           lifecycle_management    = "ENABLED"
-          idle_timeout_in_minutes = 60
+          idle_timeout_in_minutes     = 60
+          min_idle_timeout_in_minutes = 60
+          max_idle_timeout_in_minutes = 240
         }
       }
     }

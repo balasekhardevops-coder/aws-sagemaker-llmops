@@ -3,7 +3,6 @@ data "aws_availability_zones" "available" {
 }
 
 locals {
-  name_prefix = "${var.project_name}-${var.environment}"
   subnet_map = {
     for index, cidr in var.private_subnet_cidrs :
     tostring(index) => {

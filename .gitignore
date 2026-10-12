@@ -11,3 +11,11 @@ tfplan
 .env
 .env.*
 !*.tfvars.example
+
+# Pipeline plan artifacts (may contain sensitive values)
+**/plan-review.txt
+**/tfplan
+
+**/backend.hcl
+**/plan-review.txt
+**/plan.json

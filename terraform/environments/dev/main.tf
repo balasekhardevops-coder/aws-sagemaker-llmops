@@ -1,7 +1,7 @@
 data "aws_caller_identity" "current" {}
 
 locals {
-  name_prefix = "${var.project_name}-${var.environment}"
+  name_prefix = var.aws_region == "ap-south-1" ? "${var.project_name}-${var.environment}" : "${var.project_name}-${var.environment}-${var.aws_region}"
   data_bucket = "${local.name_prefix}-data-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
 }
 
@@ -28,6 +28,7 @@ module "endpoints" {
   private_subnet_ids         = module.network.private_subnet_ids
   private_route_table_ids    = module.network.private_route_table_ids
   endpoint_security_group_id = module.security.endpoint_security_group_id
+  enabled_interface_endpoints = var.enabled_interface_endpoints
 }
 
 module "kms" {
