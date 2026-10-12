@@ -1,0 +1,10 @@
+variable "name_prefix" { type = string }
+variable "vpc_id" { type = string }
+variable "private_subnet_ids" { type = list(string) }
+variable "domain_security_group_id" { type = string }
+variable "user_security_group_id" { type = string }
+variable "execution_role_arn" { type = string }
+variable "kms_key_arn" { type = string }
+variable "user_profile_name" { type = string }
+variable "jupyterlab_instance_type" { type = string }
+variable "start_jupyterlab" { type = bool }

@@ -6,3 +6,8 @@
 *.tfvars.json
 crash.log
 crash.*.log
+**/backend.hcl
+tfplan
+.env
+.env.*
+!*.tfvars.example

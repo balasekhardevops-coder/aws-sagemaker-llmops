@@ -1,0 +1,28 @@
+name: Terraform Validate
+
+on:
+  pull_request:
+    paths: ['terraform/**', '.github/workflows/terraform-validate.yml']
+  push:
+    branches: [main]
+    paths: ['terraform/**', '.github/workflows/terraform-validate.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  validate-dev:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.13.0'
+      - name: Format check across module tree
+        run: terraform fmt -check -recursive terraform
+      - name: Initialize without S3 backend or AWS credentials
+        working-directory: terraform/environments/dev
+        run: terraform init -backend=false -input=false
+      - name: Validate modules and dev root
+        working-directory: terraform/environments/dev
+        run: terraform validate -no-color
