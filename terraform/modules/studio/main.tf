@@ -1,11 +1,11 @@
 resource "aws_sagemaker_domain" "this" {
-  domain_name = "${var.name_prefix}-domain"
-  auth_mode   = "IAM"
+  domain_name                   = "${var.name_prefix}-domain"
+  auth_mode                     = "IAM"
   app_network_access_type       = "VpcOnly"
   app_security_group_management = "Customer"
-  vpc_id     = var.vpc_id
-  subnet_ids = var.private_subnet_ids
-  kms_key_id = var.kms_key_arn
+  vpc_id                        = var.vpc_id
+  subnet_ids                    = var.private_subnet_ids
+  kms_key_id                    = var.kms_key_arn
 
   default_user_settings {
     execution_role  = var.execution_role_arn
@@ -14,7 +14,7 @@ resource "aws_sagemaker_domain" "this" {
       default_resource_spec { instance_type = var.jupyterlab_instance_type }
       app_lifecycle_management {
         idle_settings {
-          lifecycle_management    = "ENABLED"
+          lifecycle_management        = "ENABLED"
           idle_timeout_in_minutes     = 60
           min_idle_timeout_in_minutes = 60
           max_idle_timeout_in_minutes = 240
@@ -62,7 +62,7 @@ resource "aws_sagemaker_space" "jupyterlab" {
   }
 }
 resource "aws_sagemaker_app" "jupyterlab" {
-  count = var.start_jupyterlab ? 1 : 0
+  count      = var.start_jupyterlab ? 1 : 0
   domain_id  = aws_sagemaker_domain.this.id
   space_name = aws_sagemaker_space.jupyterlab.space_name
   app_type   = "JupyterLab"

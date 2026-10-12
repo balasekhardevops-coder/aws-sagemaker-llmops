@@ -9,28 +9,28 @@ data "aws_iam_policy_document" "trust" {
   }
 }
 resource "aws_iam_role" "studio" {
-  name = "${var.name_prefix}-studio-execution"
+  name               = "${var.name_prefix}-studio-execution"
   assume_role_policy = data.aws_iam_policy_document.trust.json
 }
 data "aws_iam_policy_document" "studio" {
   statement {
-    sid = "ProjectBucketMetadata"
-    actions = ["s3:ListBucket", "s3:GetBucketLocation"]
+    sid       = "ProjectBucketMetadata"
+    actions   = ["s3:ListBucket", "s3:GetBucketLocation"]
     resources = [var.data_bucket_arn]
   }
   statement {
-    sid = "ProjectDataReadWrite"
-    actions = ["s3:GetObject", "s3:PutObject"]
+    sid       = "ProjectDataReadWrite"
+    actions   = ["s3:GetObject", "s3:PutObject"]
     resources = ["${var.data_bucket_arn}/*"]
   }
   statement {
-    sid = "UseProjectEncryptionKey"
-    actions = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"]
+    sid       = "UseProjectEncryptionKey"
+    actions   = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"]
     resources = [var.kms_key_arn]
   }
   statement {
-    sid = "GrantOnlyForAWSServices"
-    actions = ["kms:CreateGrant"]
+    sid       = "GrantOnlyForAWSServices"
+    actions   = ["kms:CreateGrant"]
     resources = [var.kms_key_arn]
     condition {
       test     = "Bool"
@@ -39,13 +39,13 @@ data "aws_iam_policy_document" "studio" {
     }
   }
   statement {
-    sid = "ExploreSageMakerJobs"
-    actions = ["sagemaker:ListTrainingJobs", "sagemaker:DescribeTrainingJob", "sagemaker:ListEndpoints", "sagemaker:DescribeEndpoint"]
+    sid       = "ExploreSageMakerJobs"
+    actions   = ["sagemaker:ListTrainingJobs", "sagemaker:DescribeTrainingJob", "sagemaker:ListEndpoints", "sagemaker:DescribeEndpoint"]
     resources = ["*"]
   }
 }
 resource "aws_iam_role_policy" "studio" {
-  name = "${var.name_prefix}-studio-access"
-  role = aws_iam_role.studio.id
+  name   = "${var.name_prefix}-studio-access"
+  role   = aws_iam_role.studio.id
   policy = data.aws_iam_policy_document.studio.json
 }

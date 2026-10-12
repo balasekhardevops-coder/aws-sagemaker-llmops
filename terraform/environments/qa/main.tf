@@ -25,14 +25,14 @@ module "security" {
 }
 
 module "endpoints" {
-  count                      = var.enable_studio ? 1 : 0
-  source                     = "../../modules/endpoints"
-  name_prefix                = local.name_prefix
-  aws_region                 = var.aws_region
-  vpc_id                     = module.network.vpc_id
-  private_subnet_ids         = module.network.private_subnet_ids
-  private_route_table_ids    = module.network.private_route_table_ids
-  endpoint_security_group_id = try(module.security[0].endpoint_security_group_id, null)
+  count                       = var.enable_studio ? 1 : 0
+  source                      = "../../modules/endpoints"
+  name_prefix                 = local.name_prefix
+  aws_region                  = var.aws_region
+  vpc_id                      = module.network.vpc_id
+  private_subnet_ids          = module.network.private_subnet_ids
+  private_route_table_ids     = module.network.private_route_table_ids
+  endpoint_security_group_id  = try(module.security[0].endpoint_security_group_id, null)
   enabled_interface_endpoints = var.enabled_interface_endpoints
 }
 

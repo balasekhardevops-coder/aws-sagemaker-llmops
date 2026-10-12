@@ -19,7 +19,7 @@ variable "aws_region" {
   }
 }
 variable "expected_account_id" {
-  type = string
+  type        = string
   description = "Target AWS account ID, supplied by CI as TF_VAR_expected_account_id."
   validation {
     condition     = can(regex("^[0-9]{12}$", var.expected_account_id))
@@ -55,10 +55,10 @@ variable "start_jupyterlab" {
   }
 }
 variable "enabled_interface_endpoints" {
-  type        = set(string)
-  default     = ["api", "runtime", "studio", "sts", "logs"]
+  type    = set(string)
+  default = ["api", "runtime", "studio", "sts", "logs"]
   validation {
-    condition = length(setsubtract(var.enabled_interface_endpoints, toset(["api", "runtime", "studio", "sts", "logs"]))) == 0
+    condition     = length(setsubtract(var.enabled_interface_endpoints, toset(["api", "runtime", "studio", "sts", "logs"]))) == 0
     error_message = "Unknown endpoint name."
   }
 }

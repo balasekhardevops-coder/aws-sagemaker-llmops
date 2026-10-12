@@ -10,7 +10,7 @@ variable "aws_region" {
   type    = string
   default = "ap-south-1"
   validation {
-    condition = contains(["ap-south-1", "us-east-1", "eu-west-1"], var.aws_region)
+    condition     = contains(["ap-south-1", "us-east-1", "eu-west-1"], var.aws_region)
     error_message = "Choose one of the three supported regions."
   }
 }
@@ -19,7 +19,7 @@ variable "vpc_cidr" {
   default = "10.20.0.0/16"
 }
 variable "private_subnet_cidrs" {
-  type = list(string)
+  type    = list(string)
   default = ["10.20.1.0/24", "10.20.2.0/24"]
 }
 variable "user_profile_name" {
@@ -42,14 +42,14 @@ variable "enabled_interface_endpoints" {
   default     = ["api", "runtime"]
 
   validation {
-    condition = length(setsubtract(var.enabled_interface_endpoints, toset(["api", "runtime", "studio", "sts", "logs"]))) == 0
+    condition     = length(setsubtract(var.enabled_interface_endpoints, toset(["api", "runtime", "studio", "sts", "logs"]))) == 0
     error_message = "Allowed values: api, runtime, studio, sts, logs."
   }
 }
 
 # Local use can omit; GitHub Actions always supplies a per-environment account ID.
 variable "expected_account_id" {
-  type = string
+  type    = string
   default = ""
   validation {
     condition     = var.expected_account_id == "" || can(regex("^[0-9]{12}$", var.expected_account_id))

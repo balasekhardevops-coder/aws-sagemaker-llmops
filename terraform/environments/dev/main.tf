@@ -21,25 +21,25 @@ module "security" {
 }
 
 module "endpoints" {
-  source                     = "../../modules/endpoints"
-  name_prefix                = local.name_prefix
-  aws_region                 = var.aws_region
-  vpc_id                     = module.network.vpc_id
-  private_subnet_ids         = module.network.private_subnet_ids
-  private_route_table_ids    = module.network.private_route_table_ids
-  endpoint_security_group_id = module.security.endpoint_security_group_id
+  source                      = "../../modules/endpoints"
+  name_prefix                 = local.name_prefix
+  aws_region                  = var.aws_region
+  vpc_id                      = module.network.vpc_id
+  private_subnet_ids          = module.network.private_subnet_ids
+  private_route_table_ids     = module.network.private_route_table_ids
+  endpoint_security_group_id  = module.security.endpoint_security_group_id
   enabled_interface_endpoints = var.enabled_interface_endpoints
 }
 
 module "kms" {
-  source = "../../modules/kms"
+  source      = "../../modules/kms"
   name_prefix = local.name_prefix
 }
 
 module "data_bucket" {
-  source       = "../../modules/s3-data"
-  bucket_name  = local.data_bucket
-  kms_key_arn  = module.kms.key_arn
+  source      = "../../modules/s3-data"
+  bucket_name = local.data_bucket
+  kms_key_arn = module.kms.key_arn
 }
 
 module "iam" {

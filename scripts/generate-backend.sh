@@ -14,5 +14,8 @@ else
 fi
 [[ -n "$BUCKET" ]] || { echo "State bucket is empty" >&2; exit 1; }
 aws s3api head-bucket --bucket "$BUCKET" >/dev/null
-printf 'bucket = "%s"\n' "$BUCKET" > terraform/environments/dev/backend.hcl
+cat > terraform/environments/dev/backend.hcl <<EOF
+bucket = "$BUCKET"
+key    = "dev/terraform.tfstate"
+EOF
 echo "Generated dev backend config for verified existing S3 bucket (gitignored)."

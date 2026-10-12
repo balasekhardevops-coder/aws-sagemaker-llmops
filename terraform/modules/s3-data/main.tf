@@ -1,10 +1,10 @@
 resource "aws_s3_bucket" "this" {
-  bucket = var.bucket_name
+  bucket        = var.bucket_name
   force_destroy = false
   lifecycle { prevent_destroy = true }
 }
 resource "aws_s3_bucket_public_access_block" "this" {
-  bucket = aws_s3_bucket.this.id
+  bucket                  = aws_s3_bucket.this.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -39,14 +39,14 @@ data "aws_iam_policy_document" "require_tls" {
       identifiers = ["*"]
     }
     condition {
-      test = "Bool"
+      test     = "Bool"
       variable = "aws:SecureTransport"
-      values = ["false"]
+      values   = ["false"]
     }
   }
 }
 resource "aws_s3_bucket_policy" "this" {
-  bucket = aws_s3_bucket.this.id
-  policy = data.aws_iam_policy_document.require_tls.json
+  bucket     = aws_s3_bucket.this.id
+  policy     = data.aws_iam_policy_document.require_tls.json
   depends_on = [aws_s3_bucket_public_access_block.this]
 }
