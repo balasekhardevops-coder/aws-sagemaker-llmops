@@ -16,7 +16,6 @@ resource "aws_kms_key" "this" {
   deletion_window_in_days = 30
   enable_key_rotation     = true
   policy                  = data.aws_iam_policy_document.key.json
-  lifecycle { prevent_destroy = true }
 }
 resource "aws_kms_alias" "this" {
   name          = "alias/${var.name_prefix}-data"
