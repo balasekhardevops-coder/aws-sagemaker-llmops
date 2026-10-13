@@ -133,4 +133,25 @@ data "aws_iam_policy_document" "apply_infrastructure" {
     ]
     resources = ["*"]
   }
+  statement {
+    sid = "ManageTrainingECR"
+
+    effect = "Allow"
+
+    actions = [
+      "ecr:CreateRepository",
+      "ecr:DescribeRepositories",
+      "ecr:DeleteRepository",
+      "ecr:PutLifecyclePolicy",
+      "ecr:GetLifecyclePolicy",
+      "ecr:DeleteLifecyclePolicy",
+      "ecr:ListTagsForResource",
+      "ecr:TagResource",
+      "ecr:UntagResource"
+    ]
+
+    resources = [
+      "arn:aws:ecr:ap-south-1:758854589827:repository/sagemaker-llmops-dev-training"
+    ]
+  }
 }
