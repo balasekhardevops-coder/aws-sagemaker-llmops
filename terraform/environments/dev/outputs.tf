@@ -7,3 +7,7 @@ output "sagemaker_domain_id" { value = module.studio.domain_id }
 output "sagemaker_user_profile" { value = module.studio.user_profile_name }
 output "jupyterlab_space_name" { value = module.studio.space_name }
 output "interface_endpoint_ids" { value = { for name, ep in aws_vpc_endpoint.interface : name => ep.id } }
+output "training_ecr_repository_url" {
+  description = "ECR repository for LLM training images"
+  value       = module.training_ecr.repository_url
+}

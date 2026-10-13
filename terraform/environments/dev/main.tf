@@ -28,3 +28,10 @@ module "studio" {
 
   depends_on = [aws_vpc_endpoint.s3, aws_vpc_endpoint.interface, aws_iam_role_policy.studio_data, aws_iam_role_policy.studio_kms]
 }
+
+module "training_ecr" {
+  source = "../../modules/ecr"
+
+  repository_name = "sagemaker-llmops-dev-training"
+  environment     = "dev"
+}
