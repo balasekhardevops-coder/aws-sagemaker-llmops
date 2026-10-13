@@ -31,7 +31,7 @@ data "aws_iam_policy_document" "studio_data" {
     actions   = ["sagemaker:ListTrainingJobs", "sagemaker:DescribeTrainingJob", "sagemaker:ListEndpoints", "sagemaker:DescribeEndpoint"]
     resources = ["*"]
   }
-    statement {
+  statement {
     sid = "StudioApplicationDiscovery"
 
     actions = [
