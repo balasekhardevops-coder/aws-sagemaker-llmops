@@ -1,14 +1,14 @@
 locals {
-  state_path_prefix        = var.environment == "dev" ? "dev/" : "${var.environment}/"
-  state_bucket_arn         = "arn:aws:s3:::${var.state_bucket}"
+  state_path_prefix = var.environment == "dev" ? "dev/" : "${var.environment}/"
+  state_bucket_arn  = "arn:aws:s3:::${var.state_bucket}"
   # ARN wildcard matches the region-specific state keys for QA / Prod.
   # Dev Mumbai retains the existing flat key; other Dev regions use nested keys.
-  state_object_arns        = var.environment == "dev" ? ["${local.state_bucket_arn}/dev/terraform.tfstate", "${local.state_bucket_arn}/dev/*/terraform.tfstate"] : ["${local.state_bucket_arn}/${var.environment}/*/terraform.tfstate"]
-  state_lock_arns          = [for arn in local.state_object_arns : "${arn}.tflock"]
-  project_prefix           = "sagemaker-llmops-${var.environment}"
-  project_bucket_arn       = "arn:aws:s3:::${local.project_prefix}*"
-  project_object_arn       = "arn:aws:s3:::${local.project_prefix}*/*"
-  project_role_arn         = "arn:aws:iam::${var.expected_account_id}:role/${local.project_prefix}*"
+  state_object_arns  = var.environment == "dev" ? ["${local.state_bucket_arn}/dev/terraform.tfstate", "${local.state_bucket_arn}/dev/*/terraform.tfstate"] : ["${local.state_bucket_arn}/${var.environment}/*/terraform.tfstate"]
+  state_lock_arns    = [for arn in local.state_object_arns : "${arn}.tflock"]
+  project_prefix     = "sagemaker-llmops-${var.environment}"
+  project_bucket_arn = "arn:aws:s3:::${local.project_prefix}*"
+  project_object_arn = "arn:aws:s3:::${local.project_prefix}*/*"
+  project_role_arn   = "arn:aws:iam::${var.expected_account_id}:role/${local.project_prefix}*"
 }
 
 data "aws_iam_policy_document" "backend" {
@@ -108,6 +108,16 @@ data "aws_iam_policy_document" "apply_infrastructure" {
       "sagemaker:CreateUserProfile", "sagemaker:UpdateUserProfile", "sagemaker:DeleteUserProfile",
       "sagemaker:CreateSpace", "sagemaker:UpdateSpace", "sagemaker:DeleteSpace",
       "sagemaker:CreateApp", "sagemaker:DeleteApp", "sagemaker:AddTags", "sagemaker:DeleteTags"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    sid = "AllowSageMakerManagedEFS"
+    actions = [
+      "elasticfilesystem:CreateFileSystem", "elasticfilesystem:DeleteFileSystem",
+      "elasticfilesystem:CreateMountTarget", "elasticfilesystem:DeleteMountTarget",
+      "elasticfilesystem:CreateTags", "elasticfilesystem:TagResource",
+      "elasticfilesystem:UntagResource"
     ]
     resources = ["*"]
   }
