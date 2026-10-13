@@ -31,6 +31,20 @@ data "aws_iam_policy_document" "studio_data" {
     actions   = ["sagemaker:ListTrainingJobs", "sagemaker:DescribeTrainingJob", "sagemaker:ListEndpoints", "sagemaker:DescribeEndpoint"]
     resources = ["*"]
   }
+    statement {
+    sid = "StudioApplicationDiscovery"
+
+    actions = [
+      "sagemaker:ListSpaces",
+      "sagemaker:ListApps",
+      "sagemaker:DescribeApp",
+      "sagemaker:DescribeSpace",
+      "sagemaker:ListUserProfiles",
+      "sagemaker:DescribeUserProfile"
+    ]
+
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "studio_data" {
