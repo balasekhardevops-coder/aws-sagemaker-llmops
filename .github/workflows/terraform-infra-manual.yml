@@ -1,9 +1,22 @@
-name: Terraform Infrastructure - Manual
+name: Terraform Infrastructure
 
 # Deploy exactly one selected AWS account/environment/region per manual run.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/environments/dev/**'
+      - 'terraform/modules/**'
+      - '.github/workflows/terraform-infra-manual.yml'
+      - '.github/workflows/terraform-reusable-deploy.yml'
   workflow_dispatch:
     inputs:
+      operation:
+        description: Operation (destroy is disabled for Prod)
+        required: true
+        type: choice
+        default: apply
+        options: [apply, destroy]
       target_environment:
         description: Target AWS environment
         required: true
@@ -28,12 +41,14 @@ permissions:
 
 jobs:
   infrastructure:
+    if: github.event_name == 'push' || !(inputs.operation == 'destroy' && inputs.target_environment == 'prod')
     uses: ./.github/workflows/terraform-reusable-deploy.yml
     with:
-      target_environment: ${{ inputs.target_environment }}
-      aws_region: ${{ inputs.aws_region }}
-      expected_account_id: ${{ inputs.target_environment == 'dev' && vars.AWS_ACCOUNT_DEV || inputs.target_environment == 'qa' && vars.AWS_ACCOUNT_QA || vars.AWS_ACCOUNT_PROD }}
-      state_bucket: ${{ inputs.target_environment == 'dev' && vars.TF_STATE_BUCKET_DEV || inputs.target_environment == 'qa' && vars.TF_STATE_BUCKET_QA || vars.TF_STATE_BUCKET_PROD }}
-      backend_region: ${{ inputs.target_environment == 'dev' && vars.TF_BACKEND_REGION_DEV || inputs.target_environment == 'qa' && vars.TF_BACKEND_REGION_QA || vars.TF_BACKEND_REGION_PROD }}
-      plan_role_arn: ${{ inputs.target_environment == 'dev' && vars.AWS_PLAN_ROLE_DEV || inputs.target_environment == 'qa' && vars.AWS_PLAN_ROLE_QA || vars.AWS_PLAN_ROLE_PROD }}
-      apply_role_arn: ${{ inputs.target_environment == 'dev' && vars.AWS_APPLY_ROLE_DEV || inputs.target_environment == 'qa' && vars.AWS_APPLY_ROLE_QA || vars.AWS_APPLY_ROLE_PROD }}
+      target_environment: ${{ github.event_name == 'push' && 'dev' || inputs.target_environment }}
+      aws_region: ${{ github.event_name == 'push' && 'ap-south-1' || inputs.aws_region }}
+      expected_account_id: ${{ github.event_name == 'push' && vars.AWS_ACCOUNT_DEV || inputs.target_environment == 'dev' && vars.AWS_ACCOUNT_DEV || inputs.target_environment == 'qa' && vars.AWS_ACCOUNT_QA || vars.AWS_ACCOUNT_PROD }}
+      state_bucket: ${{ github.event_name == 'push' && vars.TF_STATE_BUCKET_DEV || inputs.target_environment == 'dev' && vars.TF_STATE_BUCKET_DEV || inputs.target_environment == 'qa' && vars.TF_STATE_BUCKET_QA || vars.TF_STATE_BUCKET_PROD }}
+      backend_region: ${{ github.event_name == 'push' && vars.TF_BACKEND_REGION_DEV || inputs.target_environment == 'dev' && vars.TF_BACKEND_REGION_DEV || inputs.target_environment == 'qa' && vars.TF_BACKEND_REGION_QA || vars.TF_BACKEND_REGION_PROD }}
+      plan_role_arn: ${{ github.event_name == 'push' && vars.AWS_PLAN_ROLE_DEV || inputs.target_environment == 'dev' && vars.AWS_PLAN_ROLE_DEV || inputs.target_environment == 'qa' && vars.AWS_PLAN_ROLE_QA || vars.AWS_PLAN_ROLE_PROD }}
+      apply_role_arn: ${{ github.event_name == 'push' && vars.AWS_APPLY_ROLE_DEV || inputs.target_environment == 'dev' && vars.AWS_APPLY_ROLE_DEV || inputs.target_environment == 'qa' && vars.AWS_APPLY_ROLE_QA || vars.AWS_APPLY_ROLE_PROD }}
+      operation: ${{ github.event_name == 'push' && 'apply' || inputs.operation }}

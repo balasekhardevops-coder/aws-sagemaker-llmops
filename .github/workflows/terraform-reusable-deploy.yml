@@ -2,6 +2,9 @@ name: Terraform Reusable Deploy
 on:
   workflow_call:
     inputs:
+      operation:
+        required: true
+        type: string
       target_environment:
         required: true
         type: string
@@ -62,6 +65,11 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
+          case "${{ inputs.operation }}" in apply|destroy) ;; *) exit 1;; esac
+          if [[ "${{ inputs.operation }}" == destroy && "$DEPLOY_ENV" == prod ]]; then
+            echo 'Production destroy prohibited' >&2
+            exit 1
+          fi
           case "$DEPLOY_ENV" in dev|qa|prod) ;; *) exit 1;; esac
           case "$DEPLOY_REGION" in ap-south-1|us-east-1|eu-west-1) ;; *) exit 1;; esac
           case "$BACKEND_REGION" in ap-south-1|us-east-1|eu-west-1) ;; *) exit 1;; esac
@@ -123,15 +131,26 @@ jobs:
             -backend-config="key=${STATE_KEY}"
       - name: Format and validate
         run: |
-          terraform fmt -recursive ../../
+          terraform fmt -check -recursive ../../
           terraform validate -no-color
       - name: Plan infrastructure
         env:
           TF_VAR_expected_account_id: ${{ inputs.expected_account_id }}
           TF_VAR_aws_region: ${{ inputs.aws_region }}
-        run: terraform plan -input=false -lock-timeout=5m -out=tfplan
+        run: |
+          if [[ "${{ inputs.operation }}" == destroy ]]; then
+            terraform plan -destroy -input=false -lock-timeout=5m -out=tfplan
+          else
+            terraform plan -input=false -lock-timeout=5m -out=tfplan
+          fi
+      - name: Ensure destroy plan contains no creates
+        if: inputs.operation == 'destroy'
+        run: |
+          terraform show -json tfplan |
+            jq -e 'all(.resource_changes[]?; all(.change.actions[]; . == "delete" or . == "no-op"))'
+
       - name: Block destructive changes to production
-        if: inputs.target_environment == 'prod'
+        if: inputs.target_environment == 'prod' && inputs.operation == 'apply'
         run: |
           set -euo pipefail
           terraform show -json tfplan > plan.json
@@ -156,7 +175,7 @@ jobs:
     timeout-minutes: 60
     needs: plan
     environment:
-      name: terraform-${{ inputs.target_environment }}
+      name: ${{ inputs.operation == 'destroy' && format('terraform-{0}-destroy', inputs.target_environment) || format('terraform-{0}', inputs.target_environment) }}
     defaults:
       run:
         working-directory: terraform/environments/${{ inputs.target_environment }}
@@ -187,6 +206,7 @@ jobs:
           actual=$(aws sts get-caller-identity --query Account --output text)
           test "$actual" = "$EXPECTED_ACCOUNT"
       - name: Preflight apply role policy
+        if: inputs.operation == 'apply'
         env:
           DEPLOY_ENV: ${{ inputs.target_environment }}
         run: |
