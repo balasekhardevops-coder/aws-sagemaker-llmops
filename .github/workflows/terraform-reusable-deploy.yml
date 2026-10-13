@@ -186,6 +186,30 @@ jobs:
         run: |
           actual=$(aws sts get-caller-identity --query Account --output text)
           test "$actual" = "$EXPECTED_ACCOUNT"
+      - name: Preflight apply role policy
+        env:
+          DEPLOY_ENV: ${{ inputs.target_environment }}
+        run: |
+          set -euo pipefail
+          identity_arn=$(aws sts get-caller-identity --query Arn --output text)
+          role_name=$(sed -E 's#^arn:aws:sts::[0-9]{12}:assumed-role/([^/]+)/.*$#\1#' <<< "$identity_arn")
+          policy_name="${DEPLOY_ENV}-terraform-managed-infrastructure"
+          echo "Assumed apply role: ${role_name}"
+          aws iam get-role-policy \
+            --role-name "$role_name" \
+            --policy-name "$policy_name" \
+            --query 'PolicyDocument' \
+            --output json > apply-policy.json
+          jq -e '
+            def actions:
+              (.Action // []) | if type == "array" then . else [.] end;
+            [ .Statement[]?
+              | select((actions | index("elasticfilesystem:CreateFileSystem"))
+                or (actions | index("elasticfilesystem:*"))
+                or (actions | index("*")))
+            ] | length > 0
+          ' apply-policy.json >/dev/null
+          rm apply-policy.json
       - name: Initialize same region-isolated state
         env:
           STATE_BUCKET: ${{ inputs.state_bucket }}

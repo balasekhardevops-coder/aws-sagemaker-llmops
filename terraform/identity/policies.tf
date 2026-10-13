@@ -97,9 +97,20 @@ data "aws_iam_policy_document" "apply_infrastructure" {
       "kms:CreateKey", "kms:TagResource", "kms:UntagResource", "kms:EnableKeyRotation",
       "kms:DisableKeyRotation", "kms:CreateAlias", "kms:UpdateAlias", "kms:DeleteAlias",
       "kms:PutKeyPolicy", "kms:ScheduleKeyDeletion", "kms:CancelKeyDeletion",
-      "kms:CreateGrant", "kms:DescribeKey", "kms:ListResourceTags", "kms:GetKeyPolicy"
+      "kms:CreateGrant", "kms:Decrypt", "kms:DescribeKey", "kms:GenerateDataKeyWithoutPlainText",
+      "kms:ListResourceTags", "kms:GetKeyPolicy"
     ]
     resources = ["*"]
+  }
+  statement {
+    sid       = "CreateSageMakerServiceLinkedRole"
+    actions   = ["iam:CreateServiceLinkedRole"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "iam:AWSServiceName"
+      values   = ["sagemaker.amazonaws.com"]
+    }
   }
   statement {
     sid = "ManageProjectSageMakerStudio"
@@ -116,8 +127,9 @@ data "aws_iam_policy_document" "apply_infrastructure" {
     actions = [
       "elasticfilesystem:CreateFileSystem", "elasticfilesystem:DeleteFileSystem",
       "elasticfilesystem:CreateMountTarget", "elasticfilesystem:DeleteMountTarget",
-      "elasticfilesystem:CreateTags", "elasticfilesystem:TagResource",
-      "elasticfilesystem:UntagResource"
+      "elasticfilesystem:DescribeFileSystems", "elasticfilesystem:DescribeMountTargets",
+      "elasticfilesystem:CreateTags", "elasticfilesystem:DeleteTags",
+      "elasticfilesystem:TagResource", "elasticfilesystem:UntagResource"
     ]
     resources = ["*"]
   }
